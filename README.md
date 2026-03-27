@@ -1,39 +1,121 @@
 # TFM: Calibration and Dosimetry in Nuclear Medicine (Lu-177)
 
-This repository contains the code and resources developed for the Master's Thesis (TFM) by **Natalia Villas**. The project focuses on the calibration and calculation of Recovery Coefficients (RC) for Lu-177 treatments using SPECT/CT imaging and digital phantom simulations.
+This repository contains the code and resources developed for the Master's Thesis (TFM) by **Natalia Villas**, focused on quantitative SPECT/CT imaging and dosimetry in Lutetium-177 (Lu-177) therapies.
+The project provides a graphical tool for phantom-based calibration, enabling accurate estimation of Recovery Coefficients (RC) and activity quantification from clinical imaging data.
+
 
 ## 📌 Project Overview
 
-The main objective of this work is to provide a tool for the analysis of nuclear medicine images (SPECT/CT) to improve dosimetry accuracy in Lutetium-177 therapies. It includes:
-- **Digital Phantom Generation**: Modeling of standardized phantoms with hot inserts and background spheres.
-- **Image Processing**: Resampling and overlaying SPECT data onto CT grids for precise localization.
-- **Recovery Coefficient (RC) Calculation**: Tools to calculate activity concentration and RC in 2D and 3D with statistical and systematic uncertainty estimation.
-- **Graphical User Interface (GUI)**: A specialized interface for clinicians and researchers to interact with DICOM series.
+Accurate dosimetry in nuclear medicine requires reliable quantification of SPECT images. This project addresses that challenge by implementing a digital phantom-based calibration workflow integrated into an interactive GUI.
+It includes:
+- **Digital Phantom Modeling**:
+    - Parametric 2D phantom with hot spheres and background ROIs
+    - Adjustable position and rotation for alignment with imaging data
+- **SPECT/CT Image Processing**:
+    - Loading of DICOM CT series and SPECT volumes
+    - Resampling of SPECT to CT spatial grid (XY alignment)
+    - Interactive overlay visualization
+- **Quantitative Analysis**:
+    - Activity estimation in inserts and background regions
+    - Automatic detection of the slice with maximum activity
+    - Subpixel ROI masking for improved accuracy
+- **Recovery Coefficient (RC) Calibration**:
+    - Computation of Contrast (Q) and RC
+    - Generation of 2D and 3D calibration curves
+- **Uncertainity Estimation**:
+    - Geometric uncertainty (phantom misalignment sensitivity)
+    - Statistical uncertainty (background variability)
+    - Combined uncertainty propagation
+- **Export of Result**:
+    - Graphs (PNG)
+    - Numerical results (CSV)
+
+## 🖥️ Graphical User Interface (GUI)
+The application is built using Tkinter and designed for clinical/research usability.
+Main Capabilities
+- Load CT and SPECT DICOM data
+- Navigate slices independently (CT vs SPECT)
+- Overlay SPECT on CT with transparency
+- Enable and manipulate a digital phantom
+  - Rotation (°)
+  - Translation (pixels)
+- Input activity and volume values
+- Run:
+  - Activity analysis
+  - RC/Q calibration
 
 ## 📂 Repository Structure
 
-- `interfaz.ipynb`: The main application. A Python-based GUI (using `tkinter`) for loading DICOM series, visualizing SPECT/CT overlays, and performing RC calculations.
-- `mascaras.ipynb`: Notebook focused on the creation of masks and digital phantoms using `napari` and `OpenCV`.
-- `Tomo4FOV_Lu177peak_IRACSC001_DS.dcm`: Sample DICOM file containing Lu-177 SPECT data.
+
+└── interfaz.ipynb        Main GUI application (Tkinter-based)
+
+└── *.dcm                 Example SPECT DICOM data
+
+└── README.md
 
 ## 🛠 Features
 
-### 1. SPECT/CT Interface
-The interface allows users to:
-- Load CT series and SPECT files.
-- Visualize synchronized slices with adjustable transparency (alpha-blending).
-- Calculate activity in specific Regions of Interest (ROIs) corresponding to phantom inserts.
-- Estimate uncertainties (systematic and statistical) for the calculated coefficients.
+### 1. SPECT/CT Visualization
+- Overlay of SPECT functional data on CT anatomical images
+- Independent slice navigation for flexible alignment
+- Intensity normalization using percentile scaling
+- Background masking for improved visualization
 
-### 2. Recovery Coefficient (RC) Analysis
-- **2D/3D Curves**: Generation of RC curves based on sphere diameters.
-- **Uncertainty Propagation**: Calculation of errors derived from voxel positioning and background statistics.
-- **Exporting Results**: Save graphs as PNG and data tables as CSV.
+### 2. Digital Phantom
+- 6 hot spheres:
+    - Diameters: 10, 13, 17, 22, 28, 37 mm
+- Background ROIs distributed within phantom contour
+- Geometry defined in mm and converted to pixels
+- Subpixel ROI masks (3×3 sampling) for precision
+
+### 3. Quantitative Analysis
+- Mean activity inside:
+    - Hot inserts
+    - Background regions
+- Activity normalized by volume
+- Automatic selection of optimal slice (maximum activity)
+
+### 4. Recovery Coefficient (RC) Analysis
+
+### Contrast (Q)
+$$
+Q = \frac{\left(\frac{A_{insert}}{A_{bg}}\right) - 1}{\left(\frac{a_H}{a_B}\right) - 1} \times 100
+$$
+
+### Recovery Coefficient (RC)
+$$
+RC = Q \cdot \left(1 - \frac{1}{R}\right) + \frac{1}{R}
+$$
+
+where:
+
+$$
+R = \frac{a_H}{a_B}
+$$
+
+### 5. Calibration Curves
+- 2D curves (standard)
+- 3D curves: $Q^{3/2}$, $RC^{3/2}$
+- Error bars include:
+    - Systematic (geometric)
+    - Statistical uncertainty
+
+## 6. Uncertainty Analysis
+Geometric (Systematic)
+  - Phantom displacement: ±0.5 pixels
+  - Evaluated over a 3×3 grid
+Statistical
+  - Derived from variability in background ROIs
+Total Uncertainty
+
+$$
+\sigma_{total} = \sqrt{\sigma_{geom}^2 + \sigma_{stat}^2}
+$$
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-To run the notebooks and the interface, you will need Python 3.x and the following libraries:
+To run the interface, you will need Python 3.x and the following libraries:
 ```bash
 pip install numpy matplotlib pydicom SimpleITK opencv-python napari
 ```
@@ -41,16 +123,31 @@ pip install numpy matplotlib pydicom SimpleITK opencv-python napari
 ### Running the Interface
 1. Open `interfaz.ipynb` in a Jupyter environment (VS Code, JupyterLab, etc.).
 2. Run all cells to launch the `tkinter` window.
-3. Select your CT folder and SPECT `.dcm` file to begin the analysis.
+3. The GUI will launch automatically
+4. Select your CT folder and SPECT `.dcm` file to begin the analysis.
+
+### Workflow
+1. Load a CT DICOM series
+2. Load a SPECT DICOM file
+3. Adjust slice positions
+4. Enable and align the digital phantom
+5. Enter:
+    - Hot activity & volume
+    - Background activity & volume
+6. Run:
+    - Activity calculation
+    - Q and RC computation
+7. Save results (optional)
+
 
 ## 🧪 Methodology
-The project utilizes a 2D/3D digital phantom consisting of:
-- **6 Hot Inserts**: Diameters of 10, 13, 17, 22, 28, and 37 mm.
-- **Background ROIs**: Used to calculate the target-to-background ratio and statistical noise.
-
-The calculations follow the EANM recommendations for dosimetry in internal radiotherapy.
+- SPECT is resampled to CT grid (XY only) for spatial consistency
+- Z-axis remains independent → flexible slice matching
+- ROIs are computed using subpixel masks
+- Slice with maximum total activity is automatically selected
+- Follows EANM recommendations for quantitative SPECT imaging
 
 ## ✍️ Author
 **Natalia Villas**  
 Master's Thesis (TFM)  
-*Keywords: Nuclear Medicine, Lu-177, SPECT/CT, Dosimetry, Python, Medical Imaging.* 
+*Keywords: Nuclear Medicine, Lu-177, SPECT/CT, Dosimetry, Medical Imaging, Python, Quantification, Phantom Calibration.* 
