@@ -47,7 +47,9 @@ Main Capabilities
 ## 📂 Repository Structure
 
 
-└── interfaz.ipynb        Main GUI application (Tkinter-based)
+└── Interfaz_calibracion_TFM.ipynb        Main GUI application (Tkinter-based) - Jupyter
+
+└── Interfaz_calibracion_TFM.py           Main GUI application (Tkinter-based) - Python File
 
 └── *.dcm                 Example SPECT DICOM data
 
