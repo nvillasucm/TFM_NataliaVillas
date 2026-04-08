@@ -701,8 +701,10 @@ class Phantom2D:
 
         # 4. Ordenar por diámetro
         diam = self.diametros_mm
-        orden = np.argsort(diam)
-        diam = diam[orden]
+        # Convertir a volumen (mm³)
+        vol = (4/3) * np.pi * (diam/2)**3
+        orden = np.argsort(vol)
+        vol = vol[orden]
 
         Q = Q[orden]
         sigma_abs_Q = sigma_abs_Q[orden]
@@ -743,10 +745,10 @@ class Phantom2D:
         fig1 = plt.Figure(figsize=(5,4))
         ax1 = fig1.add_subplot(111)
 
-        ax1.errorbar(diam, Q, yerr=sigma_total_Q, fmt='o', markersize=4, ecolor = 'black', capsize = 4, label='Q (%)')
-        ax1.errorbar(diam, RC, yerr=sigma_total_RC, fmt = 's', markersize=4, ecolor = 'black', capsize = 4, label='RC (%)')
+        ax1.errorbar(vol, Q, yerr=sigma_total_Q, fmt='o', markersize=4, ecolor = 'black', capsize = 4, label='Q (%)')
+        ax1.errorbar(vol, RC, yerr=sigma_total_RC, fmt = 's', markersize=4, ecolor = 'black', capsize = 4, label='RC (%)')
         
-        ax1.set_xlabel("Diámetro esfera (mm)")
+        ax1.set_xlabel("Volumen esfera (mm³)")
         ax1.set_ylabel("%")
         ax1.set_title("Curvas de calibración (2D)")
         ax1.set_ylim(0,100)
@@ -764,7 +766,7 @@ class Phantom2D:
         tabla1 = ttk.Treeview(frame_table1, columns=("Diam", "Q ± σ", "Q ± σ_stat", "RC ± σ", "RC ± σ_stat"), show="headings", height=len(diam))
         
         # Encabezados
-        tabla1.heading("Diam", text="Diam (mm)")
+        tabla1.heading("Diam", text="Vol (mm³)")
         tabla1.heading("Q ± σ", text="Q ± σ")
         tabla1.heading("Q ± σ_stat", text="Q ± σ_stat")
         tabla1.heading("RC ± σ", text="RC ± σ")
@@ -777,9 +779,9 @@ class Phantom2D:
         tabla1.column("RC ± σ_stat", width=100, anchor="center")
 
          # Rellenar tabla
-        for d, q, s_sys_Q, s_stat_Q, rc, s_sys_RC, s_stat_RC in zip(diam, Q, sigma_abs_Q, sigma_stat_Q, RC, sigma_abs_RC, sigma_stat_RC):
+        for v, q, s_sys_Q, s_stat_Q, rc, s_sys_RC, s_stat_RC in zip(vol, Q, sigma_abs_Q, sigma_stat_Q, RC, sigma_abs_RC, sigma_stat_RC):
             tabla1.insert("", tk.END,
-                values=(f"{d:.0f}", f"{q:.1f} ± {s_sys_Q:.1f}", f"{q:.1f} ± {s_stat_Q:.1f}", f"{rc:.1f} ± {s_sys_RC:.1f}", f"{rc:.1f} ± {s_stat_RC:.1f}"))
+                values=(f"{v:.0f}", f"{q:.1f} ± {s_sys_Q:.1f}", f"{q:.1f} ± {s_stat_Q:.1f}", f"{rc:.1f} ± {s_sys_RC:.1f}", f"{rc:.1f} ± {s_stat_RC:.1f}"))
         
         tabla1.pack(fill="x")
 
@@ -793,10 +795,10 @@ class Phantom2D:
         fig2 = plt.Figure(figsize=(5,4))
         ax2 = fig2.add_subplot(111)
         
-        ax2.errorbar(diam, Q_32, yerr=sigma_total_Q_32, fmt='o', markersize=4, ecolor = 'black', capsize = 4, label='Q (%)')
-        ax2.errorbar(diam, RC_32, yerr=sigma_total_RC_32, fmt='s', markersize=4, ecolor = 'black', capsize = 4, label='RC (%)')
+        ax2.errorbar(vol, Q_32, yerr=sigma_total_Q_32, fmt='o', markersize=4, ecolor = 'black', capsize = 4, label='Q (%)')
+        ax2.errorbar(vol, RC_32, yerr=sigma_total_RC_32, fmt='s', markersize=4, ecolor = 'black', capsize = 4, label='RC (%)')
         
-        ax2.set_xlabel("Diámetro esfera (mm)")
+        ax2.set_xlabel("Volumen esfera (mm³)")
         ax2.set_ylabel("%")
         ax2.set_title("Curvas de calibración (3D)")
         ax2.set_ylim(0,100)
@@ -813,7 +815,7 @@ class Phantom2D:
         
         tabla2 = ttk.Treeview(frame_table2, columns=("Diam", "Q ± σ", "Q ± σ_stat", "RC ± σ", "RC ± σ_stat"), show="headings", height=len(diam))
         
-        tabla2.heading("Diam", text="Diam (mm)")
+        tabla2.heading("Diam", text="Vol (mm³)")
         tabla2.heading("Q ± σ", text="Q ± σ")
         tabla2.heading("Q ± σ_stat", text="Q ± σ_stat")
         tabla2.heading("RC ± σ", text="RC ± σ")
@@ -825,8 +827,8 @@ class Phantom2D:
         tabla2.column("RC ± σ", width=120, anchor="center")
         tabla2.column("RC ± σ_stat", width=120, anchor="center")
         
-        for d, q32, s_sys_Q, s_stat_Q, rc32, s_sys_RC, s_stat_RC in zip(diam, Q_32, sigma_abs_Q_32, sigma_stat_Q_32, RC_32, sigma_abs_RC_32, sigma_stat_RC_32):
-            tabla2.insert("", tk.END, values=(f"{d:.0f}", f"{q32:.1f} ± {s_sys_Q:.1f}", f"{q32:.1f} ± {s_stat_Q:.1f}", f"{rc32:.1f} ± {s_sys_RC:.1f}", f"{rc32:.1f} ± {s_stat_RC:.1f}"))
+        for v, q32, s_sys_Q, s_stat_Q, rc32, s_sys_RC, s_stat_RC in zip(vol, Q_32, sigma_abs_Q_32, sigma_stat_Q_32, RC_32, sigma_abs_RC_32, sigma_stat_RC_32):
+            tabla2.insert("", tk.END, values=(f"{v:.0f}", f"{q32:.1f} ± {s_sys_Q:.1f}", f"{q32:.1f} ± {s_stat_Q:.1f}", f"{rc32:.1f} ± {s_sys_RC:.1f}", f"{rc32:.1f} ± {s_stat_RC:.1f}"))
 
         tabla2.pack(fill="x")
 
@@ -1237,7 +1239,8 @@ def actualizar_overlay():
     # ----------------------------
     if im_ct is None or im_spect is None:
         im_ct = ax.imshow(ct_slice, cmap="bone", vmin=-100, vmax=200)
-        im_spect = ax.imshow(spect_masked, cmap="hot", alpha=0.6, vmin=0, vmax=1)
+        alpha_val = 0.6 if mostrar_spect.get() else 0.0
+        im_spect = ax.imshow(spect_masked, cmap="hot", alpha=alpha_val, vmin=0, vmax=1)
         ax.axis("off")
         if cbar is None:
             cbar = fig.colorbar(im_spect, ax=ax, fraction=0.046, pad=0.04)
@@ -1245,6 +1248,7 @@ def actualizar_overlay():
         # En actualizaciones sucesivas solo cambiamos los datos
         im_ct.set_data(ct_slice)
         im_spect.set_data(spect_masked)
+        im_spect.set_alpha(0.6 if mostrar_spect.get() else 0.0)
 
     # Eliminar cualquier dibujo previo del phantom para no duplicarlo
     for patch in ax.patches[:]:
@@ -1285,6 +1289,8 @@ slice_idx_spect = tk.IntVar(value=0)
 phantom_rot = tk.DoubleVar(value=0.0)  # grados
 phantom_dx  = tk.DoubleVar(value=0.0)  # píxeles
 phantom_dy  = tk.DoubleVar(value=0.0)  # píxeles
+
+mostrar_spect = tk.BooleanVar(value=True)
 
 # Estilos
 style = ttk.Style()
@@ -1357,40 +1363,44 @@ spect_slider.grid(row=8, column=1, columnspan=3, sticky="ew")
 
 tk.Frame(frame_controles, height=20).grid(row=9, column=0)  # fila vacía antes de los sliders
 
+ttk.Checkbutton(frame_controles, text="Mostrar SPECT",
+    variable=mostrar_spect,
+    command=actualizar_overlay).grid(row=10, column=0, columnspan=2, sticky="w")
+
 # Phantom digital
 #phantom = Phantom2D()
 mostrar_phantom = tk.BooleanVar(value=False)
 ttk.Checkbutton(frame_controles, text="Mostrar phantom digital", variable=mostrar_phantom,
-    command=actualizar_overlay).grid(row=10, column=0, columnspan=2, sticky="w")
+    command=actualizar_overlay).grid(row=11, column=0, columnspan=2, sticky="w")
 
 # Rotación
-ttk.Label(frame_controles, text="Rotar phantom (°):").grid(row=11, column=0, sticky="w")
+ttk.Label(frame_controles, text="Rotar phantom (°):").grid(row=12, column=0, sticky="w")
 ttk.Scale(frame_controles, from_=0, to=360,
           variable=phantom_rot,
-          command=lambda e: actualizar_phantom()).grid(row=11, column=1, columnspan=3, sticky="ew")
-
-# Desplazamiento X
-ttk.Label(frame_controles, text="Desplazamiento X (px):").grid(row=12, column=0, sticky="w")
-ttk.Scale(frame_controles, from_=-200, to=200,
-          variable=phantom_dx,
           command=lambda e: actualizar_phantom()).grid(row=12, column=1, columnspan=3, sticky="ew")
 
+# Desplazamiento X
+ttk.Label(frame_controles, text="Desplazamiento X (px):").grid(row=13, column=0, sticky="w")
+ttk.Scale(frame_controles, from_=-200, to=200,
+          variable=phantom_dx,
+          command=lambda e: actualizar_phantom()).grid(row=13, column=1, columnspan=3, sticky="ew")
+
 # Desplazamiento Y
-ttk.Label(frame_controles, text="Desplazamiento Y (px):").grid(row=13, column=0, sticky="w")
+ttk.Label(frame_controles, text="Desplazamiento Y (px):").grid(row=14, column=0, sticky="w")
 ttk.Scale(frame_controles, from_=-200, to=200,
           variable=phantom_dy,
-          command=lambda e: actualizar_phantom()).grid(row=13, column=1, columnspan=3, sticky="ew")
+          command=lambda e: actualizar_phantom()).grid(row=14, column=1, columnspan=3, sticky="ew")
 
 # Cálculo de actividad
 ttk.Button(frame_controles, text="Calcular Actividad", command=lambda: phantom.calcular_actividad_y_background(spect_np))\
-    .grid(row=14, column=0, pady=8, sticky="w")
+    .grid(row=15, column=0, pady=8, sticky="w")
 
 ttk.Button(frame_controles, text="Calcular Coeficientes (Q y RC)", command=lambda: phantom.plot_Q_and_RC(spect_np))\
-    .grid(row=14, column=1, pady=8, sticky="w")
+    .grid(row=15, column=1, pady=8, sticky="w")
 
 # Frame para resultados
 frame_resultados = ttk.LabelFrame(frame_controles, text="Actividad por esferas")
-frame_resultados.grid(row=15, column=0, columnspan=4, pady=10, sticky="ew")
+frame_resultados.grid(row=16, column=0, columnspan=4, pady=10, sticky="ew")
 
 text_resultados = tk.Text(frame_resultados, width=35, height=10, state="disabled")
 text_resultados.pack(fill="both", expand=True, padx=5, pady=5)
