@@ -39,6 +39,9 @@ spect_np = None # Versión de la imagen spect en un array de Numpy
 phantom = None # Phantom digital
 mostrar_phantom = None
 
+estado_var = None
+label_estado = None
+
 # --------------------- CLASES --------------------
 
 class Phantom2D:
@@ -767,9 +770,9 @@ class Phantom2D:
         
         # Encabezados
         tabla1.heading("Diam", text="Vol (mm³)")
-        tabla1.heading("Q ± σ", text="Q ± σ")
+        tabla1.heading("Q ± σ", text="Q ± σ_sis")
         tabla1.heading("Q ± σ_stat", text="Q ± σ_stat")
-        tabla1.heading("RC ± σ", text="RC ± σ")
+        tabla1.heading("RC ± σ", text="RC ± σ_sis")
         tabla1.heading("RC ± σ_stat", text="RC ± σ_stat")
 
         tabla1.column("Diam", width=60, anchor="center")
@@ -816,9 +819,9 @@ class Phantom2D:
         tabla2 = ttk.Treeview(frame_table2, columns=("Diam", "Q ± σ", "Q ± σ_stat", "RC ± σ", "RC ± σ_stat"), show="headings", height=len(diam))
         
         tabla2.heading("Diam", text="Vol (mm³)")
-        tabla2.heading("Q ± σ", text="Q ± σ")
+        tabla2.heading("Q ± σ", text="Q ± σ_sis")
         tabla2.heading("Q ± σ_stat", text="Q ± σ_stat")
-        tabla2.heading("RC ± σ", text="RC ± σ")
+        tabla2.heading("RC ± σ", text="RC ± σ_sis")
         tabla2.heading("RC ± σ_stat", text="RC ± σ_stat")
 
         tabla2.column("Diam", width=60, anchor="center")
@@ -961,41 +964,61 @@ def seleccionar_ct():
     carpeta = filedialog.askdirectory(title="Seleccionar carpeta con cortes CT (.dcm)")
     if not carpeta:
         return
+    
+    mostrar_estado("Leyendo ficheros CT...")
 
-    # Mostrar en la interfaz la ruta seleccionada
-    archivos_ct = carpeta
-    entry_ct.delete(0, tk.END)
-    entry_ct.insert(0, os.path.basename(carpeta))
+    try:
+        # Mostrar en la interfaz la ruta seleccionada
+        archivos_ct = carpeta
+        
+        entry_ct.delete(0, tk.END)
+        # Separar la ruta en partes
+        partes = os.path.normpath(carpeta).split(os.sep)
+        # Tomar las 3 últimas carpetas
+        ultimas_tres = os.sep.join(partes[-3:])
+        entry_ct.insert(0, ultimas_tres)
 
-     # Leer la serie DICOM completa del CT
-    # ImageSeriesReader identifica qué archivos pertenecen a una misma serie
-    reader = sitk.ImageSeriesReader() # Crea un lector de imagenes DICOM de SimplelTK
-    series_ids = reader.GetGDCMSeriesIDs(carpeta) # Obtiene los IDs de todas las series DICOM
-    file_names = reader.GetGDCMSeriesFileNames(carpeta, series_ids[0]) # obtiene los nombres
-    reader.SetFileNames(file_names) 
-    ct_img_sitk = reader.Execute()
+        # Leer la serie DICOM completa del CT
+        # ImageSeriesReader identifica qué archivos pertenecen a una misma serie
+        reader = sitk.ImageSeriesReader() # Crea un lector de imagenes DICOM de SimplelTK
+        series_ids = reader.GetGDCMSeriesIDs(carpeta) # Obtiene los IDs de todas las series DICOM
+        if not series_ids:
+            messagebox.showerror("Error", "No se encontraron series DICOM en la carpeta seleccionada.")
+            return
 
-    archivos_ct = file_names # Sobrescribe la variable archivos_ct con la lista de archivos individuales de la serie, en lugar de la ruta de la carpeta.
+        file_names = reader.GetGDCMSeriesFileNames(carpeta, series_ids[0]) # obtiene los nombres
+        reader.SetFileNames(file_names) 
+        ct_img_sitk = reader.Execute()
 
-    # Convertir la imagen SimpleITK a array NumPy con forma [z, y, x]
-    ct_np = sitk.GetArrayFromImage(ct_img_sitk)
-    num_slices_ct = ct_np.shape[0] # Número de cortes axiales del CT
+        archivos_ct = file_names # Sobrescribe la variable archivos_ct con la lista de archivos individuales de la serie, en lugar de la ruta de la carpeta.
 
-    # Configurar el slider del CT y colocarlo inicialmente en el corte central
-    ct_slider.config(to=num_slices_ct - 1)
-    slice_idx_ct.set(num_slices_ct // 2)
+        # Convertir la imagen SimpleITK a array NumPy con forma [z, y, x]
+        ct_np = sitk.GetArrayFromImage(ct_img_sitk)
+        num_slices_ct = ct_np.shape[0] # Número de cortes axiales del CT
 
-    # Inicializar figura
-    if fig is None:
-        inicializar_figura()
+        # Configurar el slider del CT y colocarlo inicialmente en el corte central
+        ct_slider.config(to=num_slices_ct - 1)
+        slice_idx_ct.set(num_slices_ct // 2)
 
-    # Crear el phantom digital y adaptarlo a la geometría del CT
-    # El phantom usa el tamaño de píxel del CT para convertir mm a píxeles
-    phantom = Phantom2D()
-    phantom.inicializar_desde_ct(ct_np, ct_img_sitk)
+        # Inicializar figura
+        if fig is None:
+            inicializar_figura()
 
-    # Redibujar la visualización con el nuevo CT cargado
-    actualizar_overlay()
+        # Crear el phantom digital y adaptarlo a la geometría del CT
+        # El phantom usa el tamaño de píxel del CT para convertir mm a píxeles
+        phantom = Phantom2D()
+        phantom.inicializar_desde_ct(ct_np, ct_img_sitk)
+
+        if spect_img_sitk is not None:
+            mostrar_estado("Alineando SPECT con CT...")
+            resamplear_spect_a_ct()
+
+        # Redibujar la visualización con el nuevo CT cargado
+        actualizar_overlay()
+    
+    finally:
+        mostrar_estado("Fichero CT cargado correctamente.")
+        root.after(3000, limpiar_estado)  # se borra en 3 segundos
 
 def seleccionar_fichero_spect():
     """
@@ -1019,52 +1042,64 @@ def seleccionar_fichero_spect():
     )
     if not ruta:
         return
-
-    # Guardar y mostrar la ruta seleccionada en la interfaz
-    archivo_spect = ruta # Se guarda la ruta del archivo en la variable global
-    entry_spect.delete(0, tk.END) # Borra cualquier texto que hubiera antes en el campo de texto de la interfaz
-    entry_spect.insert(0, os.path.basename(ruta))   # Inserta la ruta del archivo
-
-    # ---------------- FECHA DICOM ----------------
-    # Intentar leer la fecha de adquisición desde la cabecera DICOM
-    # stop_before_pixels=True evita cargar la imagen completa y hace la lectura más rápida
-    try:
-        ds = pydicom.dcmread(ruta, stop_before_pixels=True)
-
-        # Tag (0008,0022) = AcquisitionDate
-        fecha_adq = ds.get("AcquisitionDate", "")
-
-        if fecha_adq:
-            fecha_formateada = datetime.strptime(fecha_adq, "%Y%m%d").strftime("%d/%m/%Y")
-            entry_fecha.delete(0, tk.END)
-            entry_fecha.insert(0, fecha_formateada)
-
-    except Exception as e:
-        print("No se pudo leer la fecha DICOM:", e)
-
-    # Cargar el volumen SPECT con SimpleITK
-    spect_img_sitk = sitk.ReadImage(ruta)
-
-    # Convertir el SPECT a NumPy para trabajar corte a corte
-    # Se fuerza a float32 para facilitar cálculos y visualización posterior
-    spect_np = sitk.GetArrayFromImage(spect_img_sitk).astype(np.float32)
-
-    num_slices_spect = spect_np.shape[0] # Guarda el número de cortes del SPECT (slices)
     
-    # Configurar el slider del SPECT
-    # Colocar el slider en el corte con mayor actividad total
-    spect_slider.config(to=num_slices_spect - 1)
-    slice_idx_spect.set(phantom.slice_max_actividad(spect_np))
+    limpiar_estado()
+    mostrar_estado("Leyendo fichero SPECT...")
 
-    # Inicializar figura
-    if fig is None:
-        inicializar_figura()
+    try:
+        # Guardar y mostrar la ruta seleccionada en la interfaz
+        archivo_spect = ruta # Se guarda la ruta del archivo en la variable global
+        entry_spect.delete(0, tk.END) # Borra cualquier texto que hubiera antes en el campo de texto de la interfaz
+        partes_spect = os.path.normpath(ruta).split(os.sep)
+        ultimas_tres_spect = os.sep.join(partes_spect[-3:])
+        entry_spect.insert(0, ultimas_tres_spect)
 
-    # Si ya hay CT cargado, reamostrar el SPECT para adaptarlo al plano XY del CT
-    if ct_np is not None:
-        resamplear_spect_a_ct()
+        # ---------------- FECHA DICOM ----------------
+        # Intentar leer la fecha de adquisición desde la cabecera DICOM
+        # stop_before_pixels=True evita cargar la imagen completa y hace la lectura más rápida
+        try:
+            ds = pydicom.dcmread(ruta, stop_before_pixels=True)
 
-    actualizar_overlay()
+            # Tag (0008,0022) = AcquisitionDate
+            fecha_adq = ds.get("AcquisitionDate", "")
+
+            if fecha_adq:
+                fecha_formateada = datetime.strptime(fecha_adq, "%Y%m%d").strftime("%d/%m/%Y")
+                entry_fecha.delete(0, tk.END)
+                entry_fecha.insert(0, fecha_formateada)
+
+        except Exception as e:
+            print("No se pudo leer la fecha DICOM:", e)
+
+        # Cargar el volumen SPECT con SimpleITK
+        spect_img_sitk = sitk.ReadImage(ruta)
+
+        # Convertir el SPECT a NumPy para trabajar corte a corte
+        # Se fuerza a float32 para facilitar cálculos y visualización posterior
+        spect_np = sitk.GetArrayFromImage(spect_img_sitk).astype(np.float32)
+
+        num_slices_spect = spect_np.shape[0] # Guarda el número de cortes del SPECT (slices)
+        
+        # Configurar el slider del SPECT
+        # Colocar el slider en el corte con mayor actividad total
+        spect_slider.config(to=num_slices_spect - 1)
+        slice_idx_spect.set(phantom.slice_max_actividad(spect_np))
+
+        # Inicializar figura
+        if fig is None:
+            inicializar_figura()
+
+        # Si ya hay CT cargado, reamostrar el SPECT para adaptarlo al plano XY del CT
+        if ct_np is not None:
+            mostrar_estado("Alineando SPECT con CT...")
+            resamplear_spect_a_ct()
+
+        actualizar_overlay()
+
+    finally:
+        mostrar_estado("Fichero SPECT cargado correctamente.")
+        root.after(3000, limpiar_estado)  # se borra en 3 segundos
+
 
 def resamplear_spect_a_ct():
     """
@@ -1274,6 +1309,44 @@ def actualizar_phantom():
         
         actualizar_overlay()
 
+def mostrar_estado(mensaje):
+    """Muestra un mensaje breve de estado y fuerza su repintado inmediato."""
+    if estado_var is None:
+        return
+    estado_var.set(mensaje)
+    if label_estado is not None:
+        label_estado.configure(foreground="#1f5f8b" if mensaje else "#666666")
+    root.update_idletasks()
+
+
+def limpiar_estado():
+    """Limpia el mensaje de estado visible en la interfaz."""
+    mostrar_estado("")
+
+
+def ejecutar_con_estado(mensaje, accion):
+    """Ejecuta una acción mostrando un mensaje mientras dure el proceso."""
+    mostrar_estado(mensaje)
+    try:
+        return accion()
+    finally:
+        limpiar_estado()
+
+
+def ejecutar_calculo_actividad():
+    """Lanza el cálculo de actividad mostrando feedback visual al usuario."""
+    if phantom is None:
+        return
+    return ejecutar_con_estado("Calculando actividad y background...", lambda: phantom.calcular_actividad_y_background(spect_np))
+
+
+def ejecutar_calculo_metricas():
+    """Lanza el cálculo de Q y RC mostrando feedback visual al usuario."""
+    if phantom is None:
+        return
+    return ejecutar_con_estado("Calculando Q y RC...", lambda: phantom.plot_Q_and_RC(spect_np))
+
+
 
 
 # -------------------- INTERFAZ --------------------
@@ -1289,6 +1362,8 @@ slice_idx_spect = tk.IntVar(value=0)
 phantom_rot = tk.DoubleVar(value=0.0)  # grados
 phantom_dx  = tk.DoubleVar(value=0.0)  # píxeles
 phantom_dy  = tk.DoubleVar(value=0.0)  # píxeles
+
+estado_var = tk.StringVar(value="")
 
 mostrar_spect = tk.BooleanVar(value=True)
 
@@ -1368,7 +1443,6 @@ ttk.Checkbutton(frame_controles, text="Mostrar SPECT",
     command=actualizar_overlay).grid(row=10, column=0, columnspan=2, sticky="w")
 
 # Phantom digital
-#phantom = Phantom2D()
 mostrar_phantom = tk.BooleanVar(value=False)
 ttk.Checkbutton(frame_controles, text="Mostrar phantom digital", variable=mostrar_phantom,
     command=actualizar_overlay).grid(row=11, column=0, columnspan=2, sticky="w")
@@ -1391,21 +1465,21 @@ ttk.Scale(frame_controles, from_=-200, to=200,
           variable=phantom_dy,
           command=lambda e: actualizar_phantom()).grid(row=14, column=1, columnspan=3, sticky="ew")
 
-# Cálculo de actividad
-ttk.Button(frame_controles, text="Calcular Actividad", command=lambda: phantom.calcular_actividad_y_background(spect_np))\
+ttk.Button(frame_controles, text="Calcular Actividad", command=ejecutar_calculo_actividad)\
     .grid(row=15, column=0, pady=8, sticky="w")
 
-ttk.Button(frame_controles, text="Calcular Coeficientes (Q y RC)", command=lambda: phantom.plot_Q_and_RC(spect_np))\
+ttk.Button(frame_controles, text="Calcular Coeficientes (Q y RC)", command=ejecutar_calculo_metricas)\
     .grid(row=15, column=1, pady=8, sticky="w")
 
 # Frame para resultados
-frame_resultados = ttk.LabelFrame(frame_controles, text="Actividad por esferas")
+frame_resultados = ttk.LabelFrame(frame_controles, text="Actividad por esferas y coeficientes de recuperación en 2D.")
 frame_resultados.grid(row=16, column=0, columnspan=4, pady=10, sticky="ew")
 
 text_resultados = tk.Text(frame_resultados, width=35, height=10, state="disabled")
 text_resultados.pack(fill="both", expand=True, padx=5, pady=5)
 
-
+label_estado = ttk.Label(frame_resultados, textvariable=estado_var, foreground="#AD0000")
+label_estado.pack(anchor="w", padx=5, pady=(0, 5))
 
 # -------------------- EJECUCIÓN --------------------
 root.mainloop()
