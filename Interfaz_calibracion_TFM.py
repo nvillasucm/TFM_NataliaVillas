@@ -766,19 +766,19 @@ class Phantom2D:
         # 8. Tabla 2D
         frame_table1 = ttk.Frame(frame_Q2d)
         frame_table1.pack(side="top", fill="x", pady=5)
-        tabla1 = ttk.Treeview(frame_table1, columns=("Diam", "Q ± σ", "Q ± σ_stat", "RC ± σ", "RC ± σ_stat"), show="headings", height=len(diam))
+        tabla1 = ttk.Treeview(frame_table1, columns=("Diam", "Q ± σ_sis", "Q ± σ_stat", "RC ± σ_sis", "RC ± σ_stat"), show="headings", height=len(diam))
         
         # Encabezados
         tabla1.heading("Diam", text="Vol (mm³)")
-        tabla1.heading("Q ± σ", text="Q ± σ_sis")
+        tabla1.heading("Q ± σ_sis", text="Q ± σ_sis")
         tabla1.heading("Q ± σ_stat", text="Q ± σ_stat")
-        tabla1.heading("RC ± σ", text="RC ± σ_sis")
+        tabla1.heading("RC ± σ_sis", text="RC ± σ_sis")
         tabla1.heading("RC ± σ_stat", text="RC ± σ_stat")
 
         tabla1.column("Diam", width=60, anchor="center")
-        tabla1.column("Q ± σ", width=100, anchor="center")
+        tabla1.column("Q ± σ_sis", width=100, anchor="center")
         tabla1.column("Q ± σ_stat", width=100, anchor="center")
-        tabla1.column("RC ± σ", width=100, anchor="center")
+        tabla1.column("RC ± σ_sis", width=100, anchor="center")
         tabla1.column("RC ± σ_stat", width=100, anchor="center")
 
          # Rellenar tabla
@@ -816,18 +816,18 @@ class Phantom2D:
         frame_table2 = ttk.Frame(frame_Q32)
         frame_table2.pack(side="top", fill="x", pady=5)
         
-        tabla2 = ttk.Treeview(frame_table2, columns=("Diam", "Q ± σ", "Q ± σ_stat", "RC ± σ", "RC ± σ_stat"), show="headings", height=len(diam))
+        tabla2 = ttk.Treeview(frame_table2, columns=("Diam", "Q ± σ_sis", "Q ± σ_stat", "RC ± σ_sis", "RC ± σ_stat"), show="headings", height=len(diam))
         
         tabla2.heading("Diam", text="Vol (mm³)")
-        tabla2.heading("Q ± σ", text="Q ± σ_sis")
+        tabla2.heading("Q ± σ_sis", text="Q ± σ_sis")
         tabla2.heading("Q ± σ_stat", text="Q ± σ_stat")
-        tabla2.heading("RC ± σ", text="RC ± σ_sis")
+        tabla2.heading("RC ± σ_sis", text="RC ± σ_sis")
         tabla2.heading("RC ± σ_stat", text="RC ± σ_stat")
 
         tabla2.column("Diam", width=60, anchor="center")
-        tabla2.column("Q ± σ", width=120, anchor="center")
+        tabla2.column("Q ± σ_sis", width=120, anchor="center")
         tabla2.column("Q ± σ_stat", width=120, anchor="center")
-        tabla2.column("RC ± σ", width=120, anchor="center")
+        tabla2.column("RC ± σ_sis", width=120, anchor="center")
         tabla2.column("RC ± σ_stat", width=120, anchor="center")
         
         for v, q32, s_sys_Q, s_stat_Q, rc32, s_sys_RC, s_stat_RC in zip(vol, Q_32, sigma_abs_Q_32, sigma_stat_Q_32, RC_32, sigma_abs_RC_32, sigma_stat_RC_32):
