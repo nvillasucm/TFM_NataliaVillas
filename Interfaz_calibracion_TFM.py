@@ -155,145 +155,7 @@ class Phantom2D:
         y_total = np.concatenate([y_gran, y_l, y_base, y_r])
 
         return np.column_stack((x_total, y_total))
-
-    def dibujar_contorno(self, ax, color="black", offset_mm=0):
-        """
-        Dibuja el contorno del phantom en un eje de matplotlib.
-
-        Parámetros:
-        - ax: eje de matplotlib donde se dibuja el contorno.
-        - color: color de la línea del contorno.
-        - offset_mm: desplazamiento en mm para contraer el contorno antes de dibujarlo.
-        """
-        # Obtener los puntos (x, y) del contorno
-        contorno = self.obtener_contorno(offset_mm)
-
-        # Asegurar que la curva esté cerrada repitiendo el primer punto al final
-        vertices = np.vstack([contorno, contorno[0]])
-        # Definir los códigos del Path:
-        # - MOVETO: mueve al primer punto
-        # - LINETO: dibuja líneas entre puntos consecutivos
-        # - CLOSEPOLY: cierra la figura
-        codes = [Path.MOVETO] + [Path.LINETO]*(len(vertices)-2) + [Path.CLOSEPOLY]
-
-        # Crear el objeto Path con los vértices y sus instrucciones de dibujo
-        path = Path(vertices, codes)
-        patch = patches.PathPatch(path, fill=False, linewidth=2, color=color)
-
-        # Añadir el contorno al eje
-        ax.add_patch(patch)
-
-    def dibujar_esferas_background(self, ax, color="black"):
-        """
-        Dibuja las ROIs circulares (esferas de background) dentro del phantom.
-
-        Parámetros:
-        - ax: eje de matplotlib donde se dibujan las esferas.
-        - color: color del contorno de las esferas.
-        """
-
-        spacing = self.spacing # Tamaño de píxel en mm, obtenido del CT para convertir las medidas del phantom de mm a píxeles
-        offset_mm = 33 # Desplazamiento en mm para colocar las esferas dentro del contorno, evitando solapamientos con el borde.
-        # 15  + 3 + (37/2)  = 36.5, pero yo lo he ajustado a 33 mm.
-        offset_px = offset_mm / spacing # Desplazamiento en píxeles, calculado a partir del desplazamiento en mm y el tamaño de píxel
-
-        r_roi_px = (37 / 2) / spacing # Radio de las ROIs en píxeles, calculado a partir del diámetro del inserto más grande (37 mm) y el tamaño de píxel
-
-        cx = self.centro[0] # Coordenada X del centro del phantom en píxeles
-        cy = self.centro[1] + 35 / self.spacing # Coordenada Y del centro del phantom en píxeles, ajustada para que el centro de las esferas quede alineado con el centro de los insertos (que están a 35 mm del centro del phantom)
-
-        Rg = 150 - offset_px # Radio del arco superior en píxeles, ajustado para colocar las esferas dentro del contorno
-        Rl = 80 - offset_px # Radio de los laterales en píxeles, ajustado para colocar las esferas dentro del contorno
-
-        puntos = [] # Lista para almacenar las coordenadas de los centros de las esferas (ROIs) en píxeles
-
-        # 1. Esferas en el arco superior
-        angulos_sup = [55, 90, 125, 145, 165]
-        for ang in angulos_sup:
-            theta = np.deg2rad(ang)
-            x = cx + Rg * np.cos(theta)
-            y = cy - Rg * np.sin(theta)
-            puntos.append((x, y))
-
-        # 2. Esferas en lateral izquierdo
-        angulos_izq = [190, 240]
-        for ang in angulos_izq:
-            theta = np.deg2rad(ang)
-            x = cx - (70 / spacing) + Rl * np.cos(theta) # El centro del lateral izquierdo está desplazado 70 px a la izquierda del centro del phantom
-            y = cy - Rl * np.sin(theta) # El centro del lateral izquierdo tiene la misma coordenada Y que el centro del phantom
-            puntos.append((x, y))
-
-        # 3. Esferas en la base (posiciones fijas)
-        y_base = cy + (80 / spacing) - offset_px
-        x_center = cx
-        x_izq = cx - (53 / spacing)
-        puntos.append((x_center, y_base))
-        puntos.append((x_izq, y_base))
-
-        # 4. Esferas en lateral derecho
-        angulos_der = [275, 325, 375]
-
-        for ang in angulos_der:
-            theta = np.deg2rad(ang)
-            x = cx + (70 / spacing) + Rl * np.cos(theta)
-            y = cy - Rl * np.sin(theta)
-            puntos.append((x, y))
-
-        # 5. Dibujar todas las ROIs como círculos
-        for (x, y) in puntos:
-            ax.add_patch(
-                plt.Circle((x, y),
-                        r_roi_px,
-                        fill=False,
-                        linewidth=2,
-                        color=color)
-            )
-                
-
-    def dibujar(self, ax, color_contorno="black"):
-        """
-        Dibuja el phantom completo:
-        - Contorno exterior
-        - Insertos circulares internos
-
-        Parámetros:
-        - ax: eje de matplotlib donde se dibuja.
-        - color_contorno: color de líneas (contorno e insertos).
-        """
-        # 1. Dibujar contorno exterior
-        self.dibujar_contorno(ax, color_contorno, offset_mm=0)
-
-        # Listas para almacenar posiciones y radios de los insertos
-        pos = []
-        r = []
-        for i,d in enumerate(self.diametros_px):
-            current_angle_rad = np.deg2rad(self.angulos[i]) # Ángulo del inserto (convertido a radianes)
-            r1   = d / 2 # Radio del inserto
-
-            # Posición del centro del inserto:
-            # Se coloca sobre una circunferencia de radio fijo (radio_insertos_px)
-            insert_center_x = self.centro[0] + self.radio_insertos_px * np.cos(current_angle_rad)
-            insert_center_y = self.centro[1] + self.radio_insertos_px * np.sin(current_angle_rad)
-
-            # Guardar posición y radio
-            pos.append([insert_center_x, insert_center_y])
-            r.append(r1)
-
-        # 3. Dibujar insertos (círculos)
-        for i, c in enumerate(pos):
-            ax.add_patch(
-                plt.Circle(
-                    np.array(c, dtype=float), # centro del círculo
-                    r[i],                     # radio
-                    fill=False,               # solo contorno
-                    linewidth=2,
-                    color=color_contorno
-                )
-            )  
-
-        # 4. Dibujar las Esferas de fondo
-        self.dibujar_esferas_background(ax, color_contorno)
-
+    
     def coordenadas_insertos(self):
         """
         Devuelve un array Nx2 con las coordenadas (x, y) de los insertos
@@ -309,7 +171,13 @@ class Phantom2D:
             coords.append([cx, cy])
 
         # Convertir lista a array Nx2
-        return np.array(coords)
+        coords = np.array(coords)
+
+        if reflejar.get():
+            cx = self.centro[0]
+            coords[:,0] = 2*cx - coords[:,0]
+
+        return coords
 
     def coordenadas_background(self):
         """
@@ -359,7 +227,135 @@ class Phantom2D:
             y = cy - Rl * np.sin(theta)
             puntos.append((x, y))
 
-        return np.array(puntos)
+        coords = np.array(puntos)
+
+        if reflejar.get():
+            cx = self.centro[0]
+            coords[:,0] = 2*cx - coords[:,0]
+
+        return coords
+    
+    def coordenadas_pulmon(self):
+        """
+        Devuelve el centro del inserto pulmonar en coordenadas del phantom.
+        """
+        # mismo sistema que el resto del phantom
+        cx = self.centro[0]
+        cy = self.centro[1]
+
+        return np.array([[cx, cy]])
+
+    def dibujar_contorno(self, ax, color="black", offset_mm=0):
+        """
+        Dibuja el contorno del phantom en un eje de matplotlib.
+
+        Parámetros:
+        - ax: eje de matplotlib donde se dibuja el contorno.
+        - color: color de la línea del contorno.
+        - offset_mm: desplazamiento en mm para contraer el contorno antes de dibujarlo.
+        """
+        # Obtener los puntos (x, y) del contorno
+        contorno = self.obtener_contorno(offset_mm)
+
+        # Asegurar que la curva esté cerrada repitiendo el primer punto al final
+        vertices = np.vstack([contorno, contorno[0]])
+        # Definir los códigos del Path:
+        # - MOVETO: mueve al primer punto
+        # - LINETO: dibuja líneas entre puntos consecutivos
+        # - CLOSEPOLY: cierra la figura
+        codes = [Path.MOVETO] + [Path.LINETO]*(len(vertices)-2) + [Path.CLOSEPOLY]
+
+        # Crear el objeto Path con los vértices y sus instrucciones de dibujo
+        path = Path(vertices, codes)
+        patch = patches.PathPatch(path, fill=False, linewidth=2, color=color)
+
+        # Añadir el contorno al eje
+        ax.add_patch(patch)
+
+    def dibujar_esferas_background(self, ax, color="black"):
+        """
+        Dibuja las ROIs circulares de background.
+        """
+
+        coords = self.coordenadas_background()
+
+        r_roi_px = (37 / 2) / self.spacing
+
+        for (x, y) in coords:
+            ax.add_patch(
+                plt.Circle(
+                    (x, y),
+                    r_roi_px,
+                    fill=False,
+                    linewidth=2,
+                    color=color
+                )
+            )
+
+    def dibujar_inserto_pulmon(self, ax, color="red"):
+
+        coords = self.coordenadas_pulmon()
+
+        diam_mm = 48
+        radio_px = (diam_mm / 2) / self.spacing
+
+        for (cx, cy) in coords:
+            ax.add_patch(
+                plt.Circle(
+                    (cx, cy),
+                    radio_px,
+                    fill=False,
+                    linewidth=2,
+                    color=color
+                )
+            )            
+
+    def dibujar(self, ax):
+        """
+        Dibuja el phantom completo:
+        - Contorno exterior
+        - Insertos circulares internos
+        """
+
+        # 1. Contorno exterior
+        self.dibujar_contorno(ax, color="red", offset_mm=0)
+
+        # 2. Insertos calientes
+        if mostrar_hot.get():
+            coords = self.coordenadas_insertos()
+            radios = self.diametros_px / 2
+
+            for i, (cx, cy) in enumerate(coords):
+                ax.add_patch(
+                    plt.Circle(
+                        (cx, cy),
+                        radios[i],
+                        fill=False,
+                        linewidth=2,
+                        color="black"
+                    )
+                )
+
+        # 3. Esferas de background
+        if mostrar_background.get():
+            coords_bg = self.coordenadas_background()
+
+            r_bg_px = (37 / 2) / self.spacing
+
+            for (x, y) in coords_bg:
+                ax.add_patch(
+                    plt.Circle(
+                        (x, y),
+                        r_bg_px,
+                        fill=False,
+                        linewidth=2,
+                        color="black"
+                    )
+                )
+
+        # 4. Inserto pulmón
+        self.dibujar_inserto_pulmon(ax, color="red")
+
 
     def mask_phantom(self, shape):
         """
@@ -448,11 +444,6 @@ class Phantom2D:
             volumen = np.pi*(diam_mm/2)**2 * spect_img_sitk.GetSpacing()[2]
             resumen += f"Esfera Diámetro {diam:.2f} mm → {(act/volumen):.2f} act/vol\n"
 
-        text_resultados.config(state="normal")  # Permitir escritura
-        text_resultados.delete("1.0", tk.END)   # Limpiar contenido previo
-        text_resultados.insert(tk.END, resumen)
-        text_resultados.config(state="disabled") # Evitar edición por el usuario
-
         return np.array(actividad_list)
 
     def actividad_background_en_slice(self, spect_array, slice_max, x, y):
@@ -482,30 +473,7 @@ class Phantom2D:
             volumen = np.pi*(r_bg)**2 * spect_img_sitk.GetSpacing()[2] # Volumen de la esfera de fondo en mm³, calculado como área del círculo (pi*r^2) por el espesor del slice (spacing en Z)
             resumen += f"ROI BG {i+1}: {act:.2f} px → {(act/volumen):.2f} act/vol\n"
 
-        text_resultados.config(state="normal")
-        text_resultados.insert(tk.END, resumen)
-        text_resultados.config(state="disabled")
-
         return np.array(actividad_bg)
-
-    def calcular_actividad_y_background(self, spect_array):
-        """
-        Función wrapper para la interfaz:
-        - Encuentra el slice óptimo
-        - Calcula actividad en insertos
-        - Calcula actividad en background
-        """
-        if spect_array is None:
-            messagebox.showwarning("Atención", "No hay datos SPECT cargados.")
-            return None, None
-
-        slice_idx = self.slice_max_actividad(spect_array)
-        y, x = np.indices(spect_array[slice_idx].shape)
-        actividad = self.actividad_por_insertos_en_slice(spect_array, slice_idx, x, y)
-        background = self.actividad_background_en_slice(spect_array, slice_idx, x, y)
-
-        return actividad, background
-
     
     def calcular_Q(self, spect_array, slice_max, a_H, a_B): # Función independiente de la interfaz
         """
@@ -704,8 +672,8 @@ class Phantom2D:
 
         # 4. Ordenar por diámetro
         diam = self.diametros_mm
-        # Convertir a volumen (mm³)
-        vol = (4/3) * np.pi * (diam/2)**3
+        # Convertir a volumen (mL)
+        vol = (4/3) * np.pi * (diam/2)**3 / 1000  # Dividir por 1000 para convertir de mm³ a mL
         orden = np.argsort(vol)
         vol = vol[orden]
 
@@ -751,7 +719,7 @@ class Phantom2D:
         ax1.errorbar(vol, Q, yerr=sigma_total_Q, fmt='o', markersize=4, ecolor = 'black', capsize = 4, label='Q (%)')
         ax1.errorbar(vol, RC, yerr=sigma_total_RC, fmt = 's', markersize=4, ecolor = 'black', capsize = 4, label='RC (%)')
         
-        ax1.set_xlabel("Volumen esfera (mm³)")
+        ax1.set_xlabel("Volumen esfera (mL)")
         ax1.set_ylabel("%")
         ax1.set_title("Curvas de calibración (2D)")
         ax1.set_ylim(0,100)
@@ -769,7 +737,7 @@ class Phantom2D:
         tabla1 = ttk.Treeview(frame_table1, columns=("Diam", "Q ± σ_sis", "Q ± σ_stat", "RC ± σ_sis", "RC ± σ_stat"), show="headings", height=len(diam))
         
         # Encabezados
-        tabla1.heading("Diam", text="Vol (mm³)")
+        tabla1.heading("Diam", text="Vol (mL)")
         tabla1.heading("Q ± σ_sis", text="Q ± σ_sis")
         tabla1.heading("Q ± σ_stat", text="Q ± σ_stat")
         tabla1.heading("RC ± σ_sis", text="RC ± σ_sis")
@@ -801,7 +769,7 @@ class Phantom2D:
         ax2.errorbar(vol, Q_32, yerr=sigma_total_Q_32, fmt='o', markersize=4, ecolor = 'black', capsize = 4, label='Q (%)')
         ax2.errorbar(vol, RC_32, yerr=sigma_total_RC_32, fmt='s', markersize=4, ecolor = 'black', capsize = 4, label='RC (%)')
         
-        ax2.set_xlabel("Volumen esfera (mm³)")
+        ax2.set_xlabel("Volumen esfera (mL)")
         ax2.set_ylabel("%")
         ax2.set_title("Curvas de calibración (3D)")
         ax2.set_ylim(0,100)
@@ -818,7 +786,7 @@ class Phantom2D:
         
         tabla2 = ttk.Treeview(frame_table2, columns=("Diam", "Q ± σ_sis", "Q ± σ_stat", "RC ± σ_sis", "RC ± σ_stat"), show="headings", height=len(diam))
         
-        tabla2.heading("Diam", text="Vol (mm³)")
+        tabla2.heading("Diam", text="Vol (mL)")
         tabla2.heading("Q ± σ_sis", text="Q ± σ_sis")
         tabla2.heading("Q ± σ_stat", text="Q ± σ_stat")
         tabla2.heading("RC ± σ_sis", text="RC ± σ_sis")
@@ -945,6 +913,7 @@ def mask_circulo_area(x, y, cx, cy, r):
     #    consideramos que el píxel entero está dentro del círculo
     return count >= 5
 
+
 def seleccionar_ct():
     """
     Carga una serie DICOM de CT desde una carpeta y prepara la interfaz
@@ -1019,6 +988,7 @@ def seleccionar_ct():
     finally:
         mostrar_estado("Fichero CT cargado correctamente.")
         root.after(3000, limpiar_estado)  # se borra en 3 segundos
+
 
 def seleccionar_fichero_spect():
     """
@@ -1333,13 +1303,6 @@ def ejecutar_con_estado(mensaje, accion):
         limpiar_estado()
 
 
-def ejecutar_calculo_actividad():
-    """Lanza el cálculo de actividad mostrando feedback visual al usuario."""
-    if phantom is None:
-        return
-    return ejecutar_con_estado("Calculando actividad y background...", lambda: phantom.calcular_actividad_y_background(spect_np))
-
-
 def ejecutar_calculo_metricas():
     """Lanza el cálculo de Q y RC mostrando feedback visual al usuario."""
     if phantom is None:
@@ -1366,6 +1329,12 @@ phantom_dy  = tk.DoubleVar(value=0.0)  # píxeles
 estado_var = tk.StringVar(value="")
 
 mostrar_spect = tk.BooleanVar(value=True)
+
+mostrar_phantom = tk.BooleanVar(value=False)
+mostrar_background = tk.BooleanVar(value=False)
+mostrar_hot = tk.BooleanVar(value=False)
+
+reflejar = tk.BooleanVar(value=False)
 
 # Estilos
 style = ttk.Style()
@@ -1404,7 +1373,7 @@ ttk.Label(frame_controles, text="Fecha de adquisición:").grid(row=2, column=0, 
 entry_fecha = ttk.Entry(frame_controles, width=20)
 entry_fecha.grid(row=2, column=1, pady=4, sticky="w")
 
-ttk.Label(frame_controles, text="Act Esf Calientes (Mbq):").grid(row=3, column=0, sticky="w", pady=4)
+ttk.Label(frame_controles, text="Act Disol Caliente (MBq):").grid(row=3, column=0, sticky="w", pady=4)
 entry_actividad_hot = ttk.Entry(frame_controles, width=20)
 entry_actividad_hot.grid(row=3, column=1, pady=4, sticky="w")
 
@@ -1412,7 +1381,7 @@ ttk.Label(frame_controles, text="Vol Disol Caliente (mL):").grid(row=4, column=0
 entry_volumen_hot = ttk.Entry(frame_controles, width=20)
 entry_volumen_hot.grid(row=4, column=1, pady=4, sticky="w")
 
-ttk.Label(frame_controles, text="Act Esf Fondo (Mbq):").grid(row=3, column=2, sticky="w", pady=4)
+ttk.Label(frame_controles, text="Act Disol Fondo (MBq):").grid(row=3, column=2, sticky="w", pady=4)
 entry_actividad_bg = ttk.Entry(frame_controles, width=20)
 entry_actividad_bg.grid(row=3, column=3, pady=4, sticky="w")
 
@@ -1442,45 +1411,50 @@ ttk.Checkbutton(frame_controles, text="Mostrar SPECT",
     variable=mostrar_spect,
     command=actualizar_overlay).grid(row=10, column=0, columnspan=2, sticky="w")
 
+ttk.Checkbutton(frame_controles, text="Reflejar ROIs",
+    variable=reflejar,
+    command=actualizar_overlay).grid(row=12, column=0, columnspan=2, sticky="w")
+
 # Phantom digital
-mostrar_phantom = tk.BooleanVar(value=False)
-ttk.Checkbutton(frame_controles, text="Mostrar phantom digital", variable=mostrar_phantom,
-    command=actualizar_overlay).grid(row=11, column=0, columnspan=2, sticky="w")
+ttk.Checkbutton(frame_controles, text="Mostrar contorno phantom",
+    variable=mostrar_phantom,
+    command=actualizar_overlay).grid(row=10, column=1, columnspan=2, sticky="w")
+
+ttk.Checkbutton(frame_controles, text="Mostrar Esferas calientes",
+    variable=mostrar_hot,
+    command=actualizar_overlay).grid(row=11, column=1, columnspan=2, sticky="w")
+
+ttk.Checkbutton(frame_controles, text="Mostrar Esferas fondo",
+    variable=mostrar_background,
+    command=actualizar_overlay).grid(row=12, column=1, columnspan=2, sticky="w")
+
+tk.Frame(frame_controles, height=20).grid(row=13, column=0)  # fila vacía antes de los sliders
 
 # Rotación
-ttk.Label(frame_controles, text="Rotar phantom (°):").grid(row=12, column=0, sticky="w")
+ttk.Label(frame_controles, text="Rotar esferas calientes (°):").grid(row=14, column=0, sticky="w")
 ttk.Scale(frame_controles, from_=0, to=360,
           variable=phantom_rot,
-          command=lambda e: actualizar_phantom()).grid(row=12, column=1, columnspan=3, sticky="ew")
-
-# Desplazamiento X
-ttk.Label(frame_controles, text="Desplazamiento X (px):").grid(row=13, column=0, sticky="w")
-ttk.Scale(frame_controles, from_=-200, to=200,
-          variable=phantom_dx,
-          command=lambda e: actualizar_phantom()).grid(row=13, column=1, columnspan=3, sticky="ew")
-
-# Desplazamiento Y
-ttk.Label(frame_controles, text="Desplazamiento Y (px):").grid(row=14, column=0, sticky="w")
-ttk.Scale(frame_controles, from_=-200, to=200,
-          variable=phantom_dy,
           command=lambda e: actualizar_phantom()).grid(row=14, column=1, columnspan=3, sticky="ew")
 
-ttk.Button(frame_controles, text="Calcular Actividad", command=ejecutar_calculo_actividad)\
-    .grid(row=15, column=0, pady=8, sticky="w")
+# Desplazamiento X
+ttk.Label(frame_controles, text="Desplazamiento phantom (X):").grid(row=15, column=0, sticky="w")
+ttk.Scale(frame_controles, from_=-200, to=200,
+          variable=phantom_dx,
+          command=lambda e: actualizar_phantom()).grid(row=15, column=1, columnspan=3, sticky="ew")
+
+# Desplazamiento Y
+ttk.Label(frame_controles, text="Desplazamiento phantom (Y):").grid(row=16, column=0, sticky="w")
+ttk.Scale(frame_controles, from_=-200, to=200,
+          variable=phantom_dy,
+          command=lambda e: actualizar_phantom()).grid(row=16, column=1, columnspan=3, sticky="ew")
+
+tk.Frame(frame_controles, height=20).grid(row=17, column=0)  # fila vacía antes de los sliders
 
 ttk.Button(frame_controles, text="Calcular Coeficientes (Q y RC)", command=ejecutar_calculo_metricas)\
-    .grid(row=15, column=1, pady=8, sticky="w")
+    .grid(row=18, column=1, pady=8, sticky="w")
 
-# Frame para resultados
-frame_resultados = ttk.LabelFrame(frame_controles, text="Actividad por esferas y coeficientes de recuperación en 2D.")
-frame_resultados.grid(row=16, column=0, columnspan=4, pady=10, sticky="ew")
-
-text_resultados = tk.Text(frame_resultados, width=35, height=10, state="disabled")
-text_resultados.pack(fill="both", expand=True, padx=5, pady=5)
-
-label_estado = ttk.Label(frame_resultados, textvariable=estado_var, foreground="#AD0000")
-label_estado.pack(anchor="w", padx=5, pady=(0, 5))
-
+label_estado = ttk.Label(frame_controles, textvariable=estado_var, foreground="#AD0000")
+label_estado.grid(row=19, column=0, columnspan=4, sticky="w", pady=(5, 0))
 # -------------------- EJECUCIÓN --------------------
 root.mainloop()
 
