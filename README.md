@@ -41,7 +41,6 @@ Main Capabilities
   - Translation (pixels)
 - Input activity and volume values
 - Run:
-  - Activity analysis
   - RC/Q calibration
 
 ## 📂 Repository Structure
@@ -137,7 +136,6 @@ pip install numpy matplotlib pydicom SimpleITK opencv-python napari
     - Hot activity & volume
     - Background activity & volume
 6. Run:
-    - Activity calculation
     - Q and RC computation
 7. Save results (optional)
 
