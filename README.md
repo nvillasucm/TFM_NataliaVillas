@@ -1,4 +1,4 @@
-# TFM: Calibration and Dosimetry in Nuclear Medicine (Lu-177)
+# TFM: Development of an application for quantitative analysis of SPECT/CT images using NEMA Body phantom.
 
 This repository contains the code and resources developed for the Master's Thesis (TFM) by **Natalia Villas**, focused on quantitative SPECT/CT imaging and dosimetry in Lutetium-177 (Lu-177) therapies.
 The project provides a graphical tool for phantom-based calibration, enabling accurate estimation of Recovery Coefficients (RC) and activity quantification from clinical imaging data.
