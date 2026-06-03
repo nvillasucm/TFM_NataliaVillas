@@ -43,6 +43,16 @@ Main Capabilities
 - Run:
   - RC/Q calibration
 
+## 📦 Standalone Executable
+
+A standalone Windows executable version of the application is available in the Releases section of this repository.
+To run the application without installing Python:
+- Go to the Releases page.
+- Download the latest release package (.zip).
+- Extract the contents.
+- Run the executable file.
+This version includes all required dependencies and is intended for users who only need to execute the application.
+
 ## 📂 Repository Structure
 
 
