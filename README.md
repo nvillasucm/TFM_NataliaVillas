@@ -51,6 +51,7 @@ To run the application without installing Python:
 - Download the latest release package (.zip).
 - Extract the contents.
 - Run the executable file.
+
 This version includes all required dependencies and is intended for users who only need to execute the application.
 
 ## 📂 Repository Structure
