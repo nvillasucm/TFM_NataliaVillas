@@ -50,7 +50,7 @@ Main Capabilities
 
 └── Interfaz_calibracion_TFM_python.py     -->      Main GUI application (Tkinter-based) - Python File
 
-└── *.dcm       -->          Example SPECT DICOM data
+└── Datos e imágenes prueba Interfaz       -->      Example SPECT/CT DICOM datasets used for testing and validation
 
 └── README.md
 
