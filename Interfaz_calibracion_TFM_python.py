@@ -177,6 +177,10 @@ class Phantom2D:
             cx = self.centro[0]
             coords[:,0] = 2*cx - coords[:,0]
 
+        if reflejar_y.get():
+            cy = self.centro[1]
+            coords[:,1] = 2*cy - coords[:,1]
+
         return coords
 
     def coordenadas_background(self):
@@ -256,6 +260,11 @@ class Phantom2D:
         """
         # Obtener los puntos (x, y) del contorno
         contorno = self.obtener_contorno(offset_mm)
+
+        angulo = phantom_contorno_rot.get()
+        centro = self.centro
+
+        contorno = rotar_puntos(contorno, angulo, centro)
 
         # Asegurar que la curva esté cerrada repitiendo el primer punto al final
         vertices = np.vstack([contorno, contorno[0]])
@@ -881,6 +890,16 @@ class Phantom2D:
 # -------------------- FUNCIONES --------------------
 # global --> los cambios que se hagan dentro de la función afectarán a estas variables fuera de la función
 
+def rotar_puntos(puntos, angulo_deg, centro):
+    theta = np.deg2rad(angulo_deg)
+
+    R = np.array([
+        [np.cos(theta), -np.sin(theta)],
+        [np.sin(theta),  np.cos(theta)]
+    ])
+
+    return (puntos - centro) @ R.T + centro
+
 def mask_circulo_area(x, y, cx, cy, r):
     """
     Devuelve una máscara booleana que indica si los píxeles (x, y) 
@@ -1327,6 +1346,7 @@ slice_idx_spect = tk.IntVar(value=0)
 phantom_rot = tk.DoubleVar(value=0.0)  # grados
 phantom_dx  = tk.DoubleVar(value=0.0)  # píxeles
 phantom_dy  = tk.DoubleVar(value=0.0)  # píxeles
+phantom_contorno_rot = tk.DoubleVar(value=0.0)  # grados
 
 estado_var = tk.StringVar(value="")
 
@@ -1337,6 +1357,7 @@ mostrar_background = tk.BooleanVar(value=False)
 mostrar_hot = tk.BooleanVar(value=False)
 
 reflejar = tk.BooleanVar(value=False)
+reflejar_y = tk.BooleanVar(value=False)
 
 # Estilos
 style = ttk.Style()
@@ -1413,8 +1434,12 @@ ttk.Checkbutton(frame_controles, text="Mostrar SPECT",
     variable=mostrar_spect,
     command=actualizar_overlay).grid(row=10, column=0, columnspan=2, sticky="w")
 
-ttk.Checkbutton(frame_controles, text="Reflejar ROIs",
+ttk.Checkbutton(frame_controles, text="Reflejar ROIs horizontal",
     variable=reflejar,
+    command=actualizar_overlay).grid(row=11, column=0, columnspan=2, sticky="w")
+
+ttk.Checkbutton(frame_controles, text="Reflejar ROIs vertical",
+    variable=reflejar_y,
     command=actualizar_overlay).grid(row=12, column=0, columnspan=2, sticky="w")
 
 # Phantom digital
@@ -1450,13 +1475,19 @@ ttk.Scale(frame_controles, from_=-200, to=200,
           variable=phantom_dy,
           command=lambda e: actualizar_phantom()).grid(row=16, column=1, columnspan=3, sticky="ew")
 
-tk.Frame(frame_controles, height=20).grid(row=17, column=0)  # fila vacía antes de los sliders
+ttk.Label(frame_controles, text="Rotar contorno phantom (°):").grid(row=17, column=0, sticky="w")
+
+ttk.Scale(frame_controles, from_=0, to=360,
+          variable=phantom_contorno_rot,
+          command=lambda e: actualizar_overlay()).grid(row=17, column=1, columnspan=3, sticky="ew")
+
+tk.Frame(frame_controles, height=20).grid(row=18, column=0)  # fila vacía después de los sliders
 
 ttk.Button(frame_controles, text="Calcular Coeficientes (Q y RC)", command=ejecutar_calculo_metricas)\
-    .grid(row=18, column=1, pady=8, sticky="w")
+    .grid(row=19, column=1, pady=8, sticky="w")
 
 label_estado = ttk.Label(frame_controles, textvariable=estado_var, foreground="#AD0000")
-label_estado.grid(row=19, column=0, columnspan=4, sticky="w", pady=(5, 0))
+label_estado.grid(row=20, column=0, columnspan=4, sticky="w", pady=(5, 0))
 # -------------------- EJECUCIÓN --------------------
 root.mainloop()
 
